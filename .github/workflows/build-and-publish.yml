@@ -5,6 +5,7 @@ on:
     types: [published, created, edited]
   push:
     branches:
+      - 'main'
       - 'release/**'
 
 concurrency:
@@ -14,7 +15,6 @@ concurrency:
 env:
   IMAGE_NAME: 'unifibrowser'
   IMAGE_TAG: 'latest'
-  IMAGE_FULL_NAME: ${{ format('{0}/{1}:{2}', github.repository_owner, env.IMAGE_NAME, env.IMAGE_TAG ) }}
 
 jobs:
   buildx:
@@ -52,7 +52,7 @@ jobs:
             --cache-to "type=local,dest=/tmp/.buildx-cache" \
             --platform ${{ steps.buildx.outputs.platforms }} \
             --output "type=image,push=false" \
-            --tag ${{ env.IMAGE_FULL_NAME }} \
+            --tag ${{ format('{0}/{1}:{2}', github.repository_owner, env.IMAGE_NAME, env.IMAGE_TAG ) }} \
             --file Dockerfile .
       -
         name: Log in to Docker Hub
@@ -62,15 +62,15 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       -
         name: Publish Images
-        if: ${{ github.event_name == release && success() }}
+        if: ${{ github.event_name == 'release' && success() }}
         run: |
           docker buildx build \
             --cache-from "type=local,src=/tmp/.buildx-cache" \
             --platform ${{ steps.buildx.outputs.platforms }} \
             --output "type=image,push=true" \
-            --tag ${{ env.IMAGE_FULL_NAME }} \
+            --tag ${{ format('{0}/{1}:{2}', github.repository_owner, env.IMAGE_NAME, env.IMAGE_TAG ) }} \
             --file Dockerfile .
       -
         name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.IMAGE_FULL_NAME }}
+          docker buildx imagetools inspect ${{ format('{0}/{1}:{2}', github.repository_owner, env.IMAGE_NAME, env.IMAGE_TAG ) }}
