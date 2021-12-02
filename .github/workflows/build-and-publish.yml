@@ -20,57 +20,53 @@ jobs:
   buildx:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
-      -
-        name: Set up QEMU
+
+      - name: Prepare
+        id: prep
+        run: |
+          TAG=$(echo $GITHUB_SHA | head -c7)
+          IMAGE=${{ format('{0}/{1}', github.repository_owner, env.IMAGE_NAME) }}
+          echo ::set-output name=tagged_image::${IMAGE}:${TAG}
+          echo ::set-output name=tag::${TAG}
+
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
+
+      - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
+
+      - name: Build images
+        uses: docker/build-push-action@v2
         with:
-          install: true
-      -
-        name: Set up docker layer cache
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      -
-        name: Print available platforms
-        run: echo ${{ steps.buildx.outputs.platforms }}
-      -
-        name: Build Images
-        run: |
-          docker buildx build \
-            --cache-from "type=local,src=/tmp/.buildx-cache" \
-            --cache-to "type=local,dest=/tmp/.buildx-cache" \
-            --platform ${{ steps.buildx.outputs.platforms }} \
-            --output "type=image,push=false" \
-            --tag ${{ format('{0}/{1}:{2}', github.repository_owner, env.IMAGE_NAME, env.IMAGE_TAG ) }} \
-            --file Dockerfile .
-      -
-        name: Log in to Docker Hub
+          context: .
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6
+          builder: ${{ steps.buildx.outputs.name }}
+          push: false
+          tags: ${{ steps.prep.outputs.tagged_image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Log in to Docker Hub
+        if: ${{ contains(github.event_name, 'release') && success() }}
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      -
-        name: Publish Images
+
+      - name: Push images
         if: ${{ contains(github.event_name, 'release') && success() }}
-        run: |
-          docker buildx build \
-            --cache-from "type=local,src=/tmp/.buildx-cache" \
-            --platform ${{ steps.buildx.outputs.platforms }} \
-            --output "type=image,push=true" \
-            --tag ${{ format('{0}/{1}:{2}', github.repository_owner, env.IMAGE_NAME, env.IMAGE_TAG ) }} \
-            --file Dockerfile .
-      -
-        name: Inspect image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: ${{ steps.prep.outputs.tagged_image }}
+          cache-from: type=gha
+
+      - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ format('{0}/{1}:{2}', github.repository_owner, env.IMAGE_NAME, env.IMAGE_TAG ) }}
