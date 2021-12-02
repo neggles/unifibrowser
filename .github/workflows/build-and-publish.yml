@@ -62,7 +62,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       -
         name: Publish Images
-        if: ${{ github.event_name == 'release' && success() }}
+        if: ${{ (github.event_name == "release") && success() }}
         run: |
           docker buildx build \
             --cache-from "type=local,src=/tmp/.buildx-cache" \
