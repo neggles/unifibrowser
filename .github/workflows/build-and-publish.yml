@@ -13,6 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  DOCKER_ID: 'neggles'
   IMAGE_NAME: 'unifibrowser'
   IMAGE_TAG: 'latest'
 
@@ -27,7 +28,7 @@ jobs:
         id: prep
         run: |
           TAG=$(echo $GITHUB_SHA | head -c7)
-          IMAGE=${{ format('{0}/{1}', github.repository_owner, env.IMAGE_NAME) }}
+          IMAGE=${{ format('{0}/{1}', env.DOCKER_ID, env.IMAGE_NAME) }}
           echo ::set-output name=tagged_image::${IMAGE}:${TAG}
           echo ::set-output name=tag::${TAG}
 
@@ -66,7 +67,3 @@ jobs:
           push: true
           tags: ${{ steps.prep.outputs.tagged_image }}
           cache-from: type=gha
-
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ format('{0}/{1}:{2}', github.repository_owner, env.IMAGE_NAME, env.IMAGE_TAG ) }}
