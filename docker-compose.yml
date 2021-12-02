@@ -1,0 +1,12 @@
+version: '3.7'
+services:
+
+  unifibrowser:
+    image: neg2led/unifibrowser:latest
+    build:
+      context: .
+      target: unifibrowser
+    # ports:
+    #    - 127.0.0.1:8080:8080
+    env_file:
+      - unifibrowser.env

@@ -101,5 +101,11 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,macos,windows,visualstudiocode,composer
 
+# environment files
+*.env
+
+# local compose
+docker-compose.override.yml
+
 # local misc
 misc/
